@@ -1,0 +1,7 @@
+header:
+  version: 21
+  includes:
+  - kas/include/base.yml
+  - kas/include/scarthgap.yml
+
+machine: genericx86-64

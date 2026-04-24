@@ -1,0 +1,1 @@
+require gcc-common-erlang-build.inc

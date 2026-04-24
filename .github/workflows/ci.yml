@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+
+jobs:
+  qemu:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        platform: [arm64, amd64]
+        clib: [glibc, musl]
+
+    permissions:
+      packages: read
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Make folders
+        run: |
+          mkdir -p ${{ github.workspace }}
+
+      - name: Run command in container
+        uses: addnab/docker-run-action@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          image: ghcr.io/joaohf/erlang-build:latest-${{ matrix.clib }}
+          options: --platform linux/${{ matrix.platform }} --workdir /github/workspace -v ${{ github.workspace }}:/github/workspace
+          run: |
+            uname -a
+            gcc -v
+            cd /github/workspace
+            git clone --branch master --depth 1 https://github.com/erlang/otp/
+            cd otp
+            export ERL_TOP=`pwd`
+            ./configure --prefix=/opt/local
+            export LANG=C
+            make
+            make  install DESTDIR=/github/workspace/erlang-build
+            cd /github/workspace/erlang-build/opt/local
+            tar -zcf /github/workspace/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz *
+            sha256 /github/workspace/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz \
+              > /github/workspace/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz.sha256
+            ls -l /github/workspace
+
+      - name: List files
+        run: ls -l ${{ github.workspace }}
+
+      - name: Archive Erlang/OTP build
+        uses: actions/upload-artifact@v7
+        with:
+          name: erlang-otp-build-${{ matrix.clib }}-${{ matrix.platform }}
+          path: |
+            ${{ github.workspace }}/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz
+            ${{ github.workspace }}/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz.sha256
+          archive: true
+          if-no-files-found: error

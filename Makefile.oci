@@ -1,0 +1,100 @@
+# Makefile
+
+BUILD_DIR ?= /data-work/yocto/builds/scarthgap-erlang-build
+OCI_ARCHIVE_NAME := erlang-build-container-image-erlang-build_latest-oci.tar
+REPO := ghcr.io/joaohf/erlang-build
+REGISTRY := ghcr.io
+USER := joaohf
+
+# OCI archive locations
+OCI_TMP_DIR = $(BUILD_DIR)/tmp-$(TCLIB)/deploy/images
+OCI_genericarm64 = $(OCI_TMP_DIR)/genericarm64/$(OCI_ARCHIVE_NAME)
+OCI_genericx86-64 = $(OCI_TMP_DIR)/genericx86-64/$(OCI_ARCHIVE_NAME)
+
+
+TCLIBS := musl glibc
+MACHINES := genericarm64 genericx86-64
+
+.PHONY: all login manifests inspect push clean-manifests \
+        run-arm64 run-x86_64 run-ghcr-arm64 run-ghcr-x86_64
+
+all: login manifests
+
+login:
+	@echo $$CR_PAT | podman login $(REGISTRY) -u $(USER) --password-stdin
+
+manifests: $(TCLIBS:%=manifest-%)
+
+$(TCLIBS:%=manifest-%): manifest-%:
+	@MANIFEST=$(REPO):latest-$*; \
+	echo "==> Recreating $$MANIFEST"; \
+	podman manifest rm $$MANIFEST || true; \
+	podman manifest create $$MANIFEST; \
+	for MACHINE in $(MACHINES); do \
+		OCI_ARCHIVE=$(BUILD_DIR)/tmp-$*/deploy/images/$$MACHINE/$(OCI_ARCHIVE_NAME); \
+		echo "==> Adding $$OCI_ARCHIVE"; \
+		podman manifest add $$MANIFEST oci-archive:$$OCI_ARCHIVE; \
+	done; \
+	echo "==> Inspecting $$MANIFEST"; \
+	podman manifest inspect $$MANIFEST; \
+	echo "==> Pushing $$MANIFEST"; \
+	podman manifest push --all $$MANIFEST docker://ghcr.io/$$MANIFEST
+
+inspect: $(TCLIBS:%=inspect-%)
+
+$(TCLIBS:%=inspect-%): inspect-%:
+	@podman manifest inspect $(REPO):latest-$*
+
+push: $(TCLIBS:%=push-%)
+
+$(TCLIBS:%=push-%): push-%:
+	@podman manifest push \
+		$(REPO):latest-$* \
+		docker://ghcr.io/$(REPO):latest-$*
+
+clean-manifests:
+	@for TCLIB in $(TCLIBS); do \
+		MANIFEST=$(REPO):latest-$$TCLIB; \
+		echo "==> Removing $$MANIFEST"; \
+		podman manifest rm $$MANIFEST || true; \
+	done
+
+# -----------------------------------------------------------------------------
+# Run OCI images locally
+#
+# Examples:
+#   make run-arm64 TCLIB=musl
+#   make run-x86_64 TCLIB=glibc
+# -----------------------------------------------------------------------------
+
+TCLIB ?= musl
+
+run-arm64:
+	@OCI_ARCHIVE=$(OCI_genericarm64); \
+	echo "==> Running ARM64 image from $$OCI_ARCHIVE"; \
+	podman run --rm -it oci-archive:$$OCI_ARCHIVE
+
+run-x86_64:
+	@OCI_ARCHIVE=$(OCI_genericx86-64); \
+	echo "==> Running x86_64 image from $$OCI_ARCHIVE"; \
+	podman run --rm -it oci-archive:$$OCI_ARCHIVE
+
+# -----------------------------------------------------------------------------
+# Run images directly from GHCR
+#
+# Examples:
+#   make run-ghcr-arm64 TCLIB=musl
+#   make run-ghcr-x86_64 TCLIB=glibc
+# -----------------------------------------------------------------------------
+
+TCLIB ?= musl
+
+run-ghcr-arm64:
+	@IMAGE=$(REPO):latest-$(TCLIB); \
+	echo "==> Running ARM64 image from $$IMAGE"; \
+	podman run --rm -it --platform linux/arm64 $$IMAGE
+
+run-ghcr-x86_64:
+	@IMAGE=$(REPO):latest-$(TCLIB); \
+	echo "==> Running x86_64 image from $$IMAGE"; \
+	podman run --rm -it --platform linux/amd64 $$IMAGE

@@ -1,0 +1,35 @@
+header:
+  version: 21
+
+repos:
+  openembedded-core:
+    url: git://git.openembedded.org/openembedded-core.git
+    branch: master
+    layers:
+      meta:
+
+  bitbake:
+    url: git://git.openembedded.org/bitbake.git
+    branch: master
+    layers:
+      bitbake: disabled
+
+  meta-yocto:
+    url: git://git.yoctoproject.org/git/meta-yocto.git
+    branch: master
+    layers:
+      meta-poky:
+      meta-yocto-bsp:
+
+  meta-openembedded:
+    url: git://git.openembedded.org/meta-openembedded
+    branch: master
+    layers:
+      meta-oe:
+
+  meta-virtualization:
+    url: git://git.yoctoproject.org/git/meta-virtualization
+    path: layers/meta-virtualization
+    branch: master
+    layers:
+      .:

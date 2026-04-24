@@ -1,0 +1,39 @@
+header:
+  version: 21
+
+distro: poky
+
+repos:
+  meta-erlang-build:
+    layers:
+      meta-erlang-build:
+
+local_conf_header:
+  base: |
+    PACKAGE_CLASSES = "package_ipk"
+
+    SDKMACHINE = "x86_64"
+  
+    USER_CLASSES ?= "buildhistory buildstats"
+    BUILDHISTORY_COMMIT = "1"
+
+    TMPDIR= "${TOPDIR}/tmp-${TCLIBC}"
+
+  easy debug: |
+    EXTRA_IMAGE_FEATURES ?= "allow-empty-password allow-root-login empty-root-password post-install-logging"
+
+  remove unneeded distro and machine features: |
+    DISTRO_FEATURES:remove = "3g x11 wayland vulkan pulseaudio gobject-introspection-data bluetooth alsa nfs nfc opengl ptest"
+    MACHINE_FEATURES:remove = "alsa bluetooth qemu-usermode"
+
+  extras testing: |
+    PREFERRED_PROVIDER_virtual/kernel = "linux-dummy"
+    MACHINE_ESSENTIAL_EXTRA_RDEPENDS = ""
+
+  spdx: |
+    INHERIT_DISTRO:remove = "create-spdx"
+    INHERIT:remove = "create-spdx"
+    INHERIT += "create-spdx-3.0"
+
+target:
+  - erlang-build-container-image

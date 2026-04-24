@@ -1,0 +1,38 @@
+header:
+  version: 21
+
+repos:
+  this:
+    # this repo does not provide any layers
+    layers:
+      .: disabled
+
+  poky:
+    url: "https://git.yoctoproject.org/git/poky"
+    path: layers/poky
+    branch: scarthgap
+    layers:
+      meta:
+      meta-poky:
+      meta-yocto-bsp:
+    patches:
+      0001-ncurses-allow-user-to-change-ncurses-ABI-version:
+        repo: this
+        path: patches/0001-ncurses-allow-user-to-change-ncurses-ABI-version.patch
+
+  meta-openembedded:
+    url: https://git.openembedded.org/meta-openembedded
+    path: layers/meta-openembedded
+    branch: scarthgap
+    layers:
+      meta-oe:
+      meta-filesystems:
+      meta-networking:
+      meta-python:
+
+  meta-virtualization:
+    url: git://git.yoctoproject.org/git/meta-virtualization
+    path: layers/meta-virtualization
+    branch: scarthgap
+    layers:
+      .:

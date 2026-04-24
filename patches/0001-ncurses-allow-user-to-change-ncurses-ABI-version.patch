@@ -1,0 +1,55 @@
+From 0a4e496db446b2a31f4cc2eaf7bed125260248ec Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jo=C3=A3o=20Henrique=20Ferreira=20de=20Freitas?=
+ <joaohf@gmail.com>
+Date: Tue, 14 Apr 2026 08:57:26 -0300
+Subject: [PATCH] ncurses: allow user to change ncurses ABI version
+
+---
+ meta/recipes-core/ncurses/ncurses.inc    | 6 ++++--
+ meta/recipes-core/ncurses/ncurses_6.4.bb | 2 +-
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/meta/recipes-core/ncurses/ncurses.inc b/meta/recipes-core/ncurses/ncurses.inc
+index 5ef735fcf8..75e1d636d9 100644
+--- a/meta/recipes-core/ncurses/ncurses.inc
++++ b/meta/recipes-core/ncurses/ncurses.inc
+@@ -15,6 +15,8 @@ inherit autotools binconfig-disabled multilib_header pkgconfig
+ # Upstream has useful patches at times at ftp://invisible-island.net/ncurses/
+ SRC_URI = "git://github.com/ThomasDickey/ncurses-snapshots.git;protocol=https;branch=master"
+ 
++EXTRA_OECONF += "--with-abi-version=${NCURSES_ABI_VERSION}"
++
+ EXTRA_AUTORECONF = "-I m4"
+ 
+ CACHED_CONFIGUREVARS = "cf_cv_func_nanosleep=yes"
+@@ -218,7 +220,7 @@ do_install() {
+                 test -h $f || continue
+                 rm -f $f
+                 echo '/* GNU ld script */'  >$f
+-                echo "INPUT($i.so.5 AS_NEEDED(-ltinfo))" >>$f
++                echo "INPUT($i.so.${NCURSES_ABI_VERSION} AS_NEEDED(-ltinfo))" >>$f
+         done
+ 
+         # Make sure that libcurses is linked so that it gets -ltinfo
+@@ -243,7 +245,7 @@ do_install() {
+ 
+             # Use ln -rs to ensure this is a relative link despite absolute paths
+             # (as we can't know the relationship between base_libdir and libdir).
+-            ln -rs ${D}${base_libdir}/libtinfo.so.5 ${D}${libdir}/libtinfo.so
++            ln -rs ${D}${base_libdir}/libtinfo.so.${NCURSES_ABI_VERSION} ${D}${libdir}/libtinfo.so
+         fi
+         if [ -d "${D}${includedir}/ncurses" ]; then
+             for f in `find ${D}${includedir}/ncurses -name "*.h"`
+diff --git a/meta/recipes-core/ncurses/ncurses_6.4.bb b/meta/recipes-core/ncurses/ncurses_6.4.bb
+index d3b4106118..67bd0b1ce6 100644
+--- a/meta/recipes-core/ncurses/ncurses_6.4.bb
++++ b/meta/recipes-core/ncurses/ncurses_6.4.bb
+@@ -13,7 +13,7 @@ SRC_URI += "file://0001-tic-hang.patch \
+ # commit id corresponds to the revision in package version
+ SRCREV = "1003914e200fd622a27237abca155ce6bf2e6030"
+ S = "${WORKDIR}/git"
+-EXTRA_OECONF += "--with-abi-version=5"
++NCURSES_ABI_VERSION ?= "5"
+ UPSTREAM_CHECK_GITTAGREGEX = "v(?P<pver>\d+_\d+)$"
+ 
+ # This is needed when using patchlevel versions like 6.1+20181013
