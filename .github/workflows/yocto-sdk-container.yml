@@ -1,0 +1,160 @@
+
+#
+# Based on:
+# - https://github.com/kraj/meta-clang/blob/master/.github/workflows
+# - https://github.com/garmin/meta-lts-collab/tree/dunfell/.github/workflows
+name: yocto-sdk-container
+
+on:
+  workflow_dispatch:
+    inputs:
+          branch:
+            description: 'The Yocto branch that is intended to be built'
+            default: 'scarthgap'
+            required: false
+            type: string
+          runner:
+            description: 'The runner to execute this workflow with'
+            default: 'linux'
+            required: false
+            type: string
+          save-cache:
+            description: 'Saves the download and sstate cache after the build finishes'
+            default: true
+            required: false
+            type: boolean
+          use-cache:
+            description: 'Restores the download and sstate cache before building'
+            default: true
+            required: false
+            type: boolean
+
+  schedule:
+    - cron: " 0 3 * * SUN"
+
+jobs:
+  build:
+    name: Yocto Erlang SDK build container
+    runs-on: [ubuntu-latest]
+    timeout-minutes: 720
+    strategy:
+      matrix:
+        platform: [genericx86-64, genericarm64]
+        clib: [glibc, musl]
+
+    env:
+      YOCTO_DIR: ${{ github.workspace }}/data-work/yocto
+      YOCTO_RELEASE: scarthgap
+
+    steps:
+      - name: Clone erlang-build-linux
+        uses: actions/checkout@v6
+        with:
+          path: erlang-build-linux
+
+      - name: Prepare cache dirs
+        run: |
+          mkdir -p $YOCTO_DIR/downloads
+          mkdir -p $YOCTO_DIR/sstate-cache
+
+      - name: Restore downloads
+        id: cache-downloads
+        if: ${{ inputs.use-cache }}
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.YOCTO_DIR }}/downloads
+          key: downloads-${{ inputs.branch }}-${{ hashFiles('**/*.bb', '**/*.bbappend') }}
+          restore-keys: |
+            downloads-${{ inputs.branch }}
+            downloads-
+
+      - name: Restore sstate
+        id: cache-sstate
+        if: ${{ inputs.use-cache }}
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.YOCTO_DIR }}/sstate-cache
+          key: state-${{ inputs.branch }}-${{ matrix.platform }}-${{ matrix.clib }}-${{ hashFiles('**/*.bb') }}
+          restore-keys: |
+            sstate-${{ inputs.branch }}-${{ matrix.platform }}-${{ matrix.clib }}-
+            sstate-${{ inputs.branch }}-
+            sstate-
+
+      - name: Setup and run bitbake
+        run: |
+          sudo apt-get update
+          sudo apt install pipx
+          pipx install kas
+
+          cd erlang-build-linux
+          
+          make build-${{ matrix.platform }}-${{ matrix.clib }} KAS=kas-container
+
+      # - name: Export SDK OCI containers
+
+      # - name: Prepare results
+      #   run: |
+      #     cd yoe
+      #     /bin/bash -c ". ./envsetup.sh qemuarm64 && resulttool report build/tmp/log/oeqa"
+
+      # - name: Clean shared state
+      #   run: |
+      #     cd yoe
+      #     /bin/bash -c ". ./envsetup.sh qemuarm64 && sstate-cache-management.py -d --remove-orphans -y "
+
+      - name: Archive OCI container
+        uses: actions/upload-artifact@v7
+        with:
+          name: erlang-build-container-${{ matrix.clib }}-${{ matrix.platform }}
+          path: ${{ env.YOCTO_DIR }}/builds/${{ env.YOCTO_RELEASE }}-erlang-build/tmp-${{ matrix.clib }}/deploy/images/${{ matrix.platform }}/erlang-build-container-image-erlang-build_latest-oci.tar
+          archive: true
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Save downloads
+        if: ${{ inputs.save-cache && steps.cache-downloads.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.YOCTO_DIR }}/downloads
+          key: ${{ steps.cache-downloads.outputs.cache-primary-key }}
+
+      - name: Save sstate
+        if: ${{ inputs.save-cache && steps.cache-sstate.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.YOCTO_DIR }}/sstate-cache
+          key: ${{ steps.cache-sstate.outputs.cache-primary-key }}
+
+  collect:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Clone erlang-build-linux
+        uses: actions/checkout@v6
+        with:
+          path: erlang-build-linux
+
+      - name: Log in to GitHub Container Registry
+        run: |
+          make -f erlang-build-linux/Makefile.oci login \
+            REGISTRY_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            REGISTRY_USER=${{ github.actor }} \
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Show results
+        run: |
+          echo "Concatenated results:"
+          find artifacts
+
+      - name: Create erlang-build manifest
+        run: |
+          pwd
+          make -f erlang-build-linux/Makefile.oci manifests BUILD_DIR=${{ github.workspace }}/artifacts
+          make -f erlang-build-linux/Makefile.oci inspect BUILD_DIR=${{ github.workspace }}/artifacts
