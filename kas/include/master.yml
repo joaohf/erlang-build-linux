@@ -3,13 +3,13 @@ header:
 
 repos:
   openembedded-core:
-    url: git://git.openembedded.org/openembedded-core.git
+    url: https://github.com/openembedded/openembedded-core.git
     branch: master
     layers:
       meta:
 
   bitbake:
-    url: git://git.openembedded.org/bitbake.git
+    url: https://github.com/openembedded/bitbake
     branch: master
     layers:
       bitbake: disabled
@@ -22,7 +22,7 @@ repos:
       meta-yocto-bsp:
 
   meta-openembedded:
-    url: git://git.openembedded.org/meta-openembedded
+    url: https://github.com/openembedded/meta-openembedded
     branch: master
     layers:
       meta-oe:
