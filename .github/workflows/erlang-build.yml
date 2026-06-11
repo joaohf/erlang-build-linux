@@ -15,9 +15,13 @@ jobs:
       matrix:
         platform: [arm64, amd64]
         clib: [glibc, musl]
+        erlang_version: [maint-29, maint-28]
 
     permissions:
       packages: read
+
+    env:
+      BUILD_NAME: erlang-${{ matrix.erlang_version }}-${{ matrix.clib }}-${{ matrix.platform }}
 
     steps:
       - name: Set up QEMU
@@ -47,18 +51,17 @@ jobs:
             make
             make  install DESTDIR=/github/workspace/erlang-build
             cd /github/workspace/erlang-build/opt/local
-            tar -zcf /github/workspace/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz *
-            sha256sum /github/workspace/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz \
-              > /github/workspace/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz.sha256
+            tar -zcf /github/workspace/${{ env.BUILD_NAME }}.tar.gz *
+            sha256sum /github/workspace/${{ env.BUILD_NAME }}.tar.gz > /github/workspace/${{ env.BUILD_NAME }}.tar.gz.sha256
             ls -l /github/workspace
 
       - name: Archive Erlang/OTP build
         uses: actions/upload-artifact@v7
         with:
-          name: erlang-otp-build-${{ matrix.clib }}-${{ matrix.platform }}
+          name: erlang-otp-${{ matrix.erlang_version }}-${{ matrix.clib }}-${{ matrix.platform }}
           path: |
-            ${{ github.workspace }}/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz
-            ${{ github.workspace }}/my-erlang-build-${{ matrix.clib }}-${{ matrix.platform }}.tar.gz.sha256
+            ${{ github.workspace }}/${{ env.BUILD_NAME }}.tar.gz
+            ${{ github.workspace }}/${{ env.BUILD_NAME }}.tar.gz.sha256
           archive: true
           if-no-files-found: error
 
