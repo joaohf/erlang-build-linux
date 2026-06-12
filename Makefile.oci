@@ -79,6 +79,7 @@ OCI_genericx86-64 = $(OCI_TMP_DIR)/genericx86-64/$(OCI_ARCHIVE_NAME)
 
 TCLIB ?= glibc
 
+OCI_RUN_ARGS ?= -v $(PWD):/tmp/work -w /tmp/work
 
 # -----------------------------------------------------------------------------
 # Run OCI images locally
@@ -96,7 +97,7 @@ run-arm64:
 run-x86_64:
 	@OCI_ARCHIVE=$(OCI_genericx86-64); \
 	echo "==> Running x86_64 image from $$OCI_ARCHIVE"; \
-	podman run --rm -it oci-archive:$$OCI_ARCHIVE
+	podman run --rm $(OCI_RUN_ARGS) -it oci-archive:$$OCI_ARCHIVE
 
 # -----------------------------------------------------------------------------
 # Run images directly from GHCR

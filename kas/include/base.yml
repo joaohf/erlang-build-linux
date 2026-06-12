@@ -30,6 +30,9 @@ local_conf_header:
     PREFERRED_PROVIDER_virtual/kernel = "linux-dummy"
     MACHINE_ESSENTIAL_EXTRA_RDEPENDS = ""
 
+  enable static libraries: |
+    DISABLE_STATIC = ""
+
   spdx: |
     INHERIT_DISTRO:remove = "create-spdx"
     INHERIT:remove = "create-spdx"
