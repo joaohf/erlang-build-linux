@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   # push:
 
+  schedule:
+    - cron: " 0 3 * * MON"
+
 permissions:
   contents: write
 
@@ -13,19 +16,27 @@ jobs:
 
     strategy:
       matrix:
-        platform: [arm64, amd64]
+        platform: [amd64, arm64]
         clib: [glibc, musl]
-        erlang_version: [maint-29, maint-28]
+        erlang_version: [master, maint-29, maint-28]
+        variant: [shared, static]
+
+        exclude:
+          - variant: static
+            clib: glibc
 
     permissions:
       packages: read
 
     env:
-      BUILD_NAME: erlang-${{ matrix.erlang_version }}-${{ matrix.clib }}-${{ matrix.platform }}
+      BUILD_NAME: erlang-${{ matrix.erlang_version }}-${{ matrix.clib }}-${{ matrix.variant }}-${{ matrix.platform }}
 
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
+
+      - name: Clone erlang-build-linux
+        uses: actions/checkout@v6
 
       - name: Make folders
         run: |
@@ -40,28 +51,15 @@ jobs:
           image: ghcr.io/joaohf/erlang-build:latest-${{ matrix.clib }}
           options: --platform linux/${{ matrix.platform }} --workdir /github/workspace -v ${{ github.workspace }}:/github/workspace
           run: |
-            uname -a
-            gcc -v
-            cd /github/workspace
-            git clone --branch master --depth 1 https://github.com/erlang/otp/
-            cd otp
-            export ERL_TOP=`pwd`
-            ./configure --prefix=/opt/local
-            export LANG=C
-            make
-            make  install DESTDIR=/github/workspace/erlang-build
-            cd /github/workspace/erlang-build/opt/local
-            tar -zcf /github/workspace/${{ env.BUILD_NAME }}.tar.gz *
-            sha256sum /github/workspace/${{ env.BUILD_NAME }}.tar.gz > /github/workspace/${{ env.BUILD_NAME }}.tar.gz.sha256
-            ls -l /github/workspace
+            bash scripts/build_otp.bash ${{ matrix.erlang_version }} ${{ env.BUILD_NAME }} ${{ matrix.variant}}
 
       - name: Archive Erlang/OTP build
         uses: actions/upload-artifact@v7
         with:
-          name: erlang-otp-${{ matrix.erlang_version }}-${{ matrix.clib }}-${{ matrix.platform }}
+          name: erlang-otp-${{ matrix.erlang_version }}-${{ matrix.clib }}-${{ matrix.variant }}-${{ matrix.platform }}
           path: |
-            ${{ github.workspace }}/${{ env.BUILD_NAME }}.tar.gz
-            ${{ github.workspace }}/${{ env.BUILD_NAME }}.tar.gz.sha256
+            ${{ github.workspace }}/tmp/otp_builds/${{ env.BUILD_NAME }}.tar.gz
+            ${{ github.workspace }}/tmp/otp_builds/${{ env.BUILD_NAME }}.tar.gz.sha256
           archive: true
           if-no-files-found: error
 

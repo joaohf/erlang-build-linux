@@ -11,10 +11,17 @@ The main targets here are:
 
 TODO:
 
-- Add multiple Erlang/OTP versions
 - Add tools and process for SBOM, license report, etc
-- Improve CI flows for releasing build artifacts
-- Reduce Erlang/OTP binaries, it is for debugging right now.
+
+## Erlang Versions
+
+In order to define a criteria, the latest two _maint_ release Erlang/OTP versions are being built as well the _master_ branch:
+
+ - master
+ - maint-29
+ - maint-28
+
+The file `.github/workflows/erlang-build.yml` controls which versions will be build.
 
 ## Yocto side
 
@@ -84,3 +91,24 @@ There are two Makefiles used to keep all build commands:
 
  - `.github/workflows/erlang-build.yml`, this workflow is responsible for building Erlang/OTP from source code and
  publishing as tarball files at [erlang build linux binary releases](https://github.com/joaohf/erlang-build-linux/releases).
+
+## Notes on running Erlang binary
+
+### Ubuntu
+
+Works by default, no additional procedures are needed.
+
+### Alpine
+
+* Additional packages for `shared` erlang binary tarball:
+
+```
+apk add --no-cache libstdc++ ncurses-libs
+```
+
+* Fixing libtinfo symbolic link, see [tinfo is missing in ncurses package](https://gitlab.alpinelinux.org/alpine/aports/-/work_items/16434)
+
+```
+cd /usr/lib
+ln -s /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6
+```
