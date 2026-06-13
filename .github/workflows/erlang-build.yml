@@ -45,10 +45,6 @@ jobs:
           image: ghcr.io/joaohf/erlang-build:latest-${{ matrix.clib }}
           options: --platform linux/${{ matrix.platform }} --workdir /github/workspace -v ${{ github.workspace }}:/github/workspace
           run: |
-            uname -a
-            gcc -v
-            pwd
-            ls -l
             bash scripts/build_otp.bash ${{ matrix.erlang_version }} ${{ env.BUILD_NAME }}
 
       - name: Archive Erlang/OTP build
