@@ -23,8 +23,8 @@ local_conf_header:
     EXTRA_IMAGE_FEATURES ?= "allow-empty-password allow-root-login empty-root-password post-install-logging"
 
   remove unneeded distro and machine features: |
-    DISTRO_FEATURES:remove = "3g x11 wayland vulkan pulseaudio gobject-introspection-data bluetooth alsa nfs nfc opengl ptest"
-    MACHINE_FEATURES:remove = "alsa bluetooth qemu-usermode"
+    DISTRO_FEATURES:remove = "3g x11 wayland vulkan pulseaudio gobject-introspection-data bluetooth alsa nfs nfc opengl ptest pcmcia usbgadget usbhost wifi zeroconf pci"
+    MACHINE_FEATURES:remove = "alsa bluetooth qemu-usermode usbhost usbgadget wifi"
 
   extras testing: |
     PREFERRED_PROVIDER_virtual/kernel = "linux-dummy"

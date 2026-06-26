@@ -122,7 +122,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: erlang-build-container-${{ matrix.clib }}-${{ matrix.platform }}
-          path: ${{ env.YOCTO_DIR }}/builds/${{ env.YOCTO_RELEASE }}-erlang-build/tmp-${{ matrix.clib }}/deploy/images/${{ matrix.platform }}/erlang-build-container-image-erlang-build_latest-oci.tar
+          path: |
+            ${{ env.YOCTO_DIR }}/builds/${{ env.YOCTO_RELEASE }}-erlang-build/tmp-${{ matrix.clib }}/deploy/images/${{ matrix.platform }}/erlang-build-container-image-erlang-build_latest-oci.tar
+            ${{ env.YOCTO_DIR }}/builds/${{ env.YOCTO_RELEASE }}-erlang-build/tmp-${{ matrix.clib }}/deploy/images/${{ matrix.platform }}/erlang-build-container-image-${{ matrix.platform }}.rootfs.spdx.json
           archive: true
           if-no-files-found: error
           retention-days: 5
